@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Alert, Button, Spinner } from 'react-bootstrap'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Alert, Button, ProgressBar, Spinner } from 'react-bootstrap'
 import { getQuestions } from '../api.js'
+import QuestionCard from '../components/QuestionCard.jsx'
 
 export default function Quiz() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
+
+  const [index, setIndex] = useState(0)
+  const [selected, setSelected] = useState(null)
+  const [review, setReview] = useState([])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -52,32 +59,43 @@ export default function Quiz() {
     return (
       <Alert variant="danger">
         <p>{error}</p>
-        <Button onClick={() => setAttempt(attempt + 1)}>Try again</Button>
+        <Button className="me-2" onClick={() => setAttempt(attempt + 1)}>Try again</Button>
+        <Button variant="outline-secondary" onClick={() => navigate('/')}>Back to start</Button>
       </Alert>
     )
   }
 
-  const question = questions[0]
+  const question = questions[index]
+  const isLast = index === questions.length - 1
+  const score = review.filter((r) => r.picked === r.correct).length
+
+  function handleSelect(answer) {
+    setSelected(answer)
+    setReview([...review, { question: question.question, picked: answer, correct: question.correct }])
+  }
+
+  function handleNext() {
+    if (isLast) {
+      navigate('/results', { state: { score, total: questions.length, review } })
+    } else {
+      setIndex(index + 1)
+      setSelected(null)
+    }
+  }
 
   return (
     <div>
-      <h2 className="h5 mb-3">{question.question}</h2>
-      {question.answers.map((answer) => (
-        <Button key={answer} variant="outline-primary" className="d-block mb-2">
-          {answer}
+      <div className="d-flex justify-content-between mb-1">
+        <span>Question {index + 1} of {questions.length}</span>
+        <span>Score: {score}</span>
+      </div>
+      <ProgressBar now={(index / questions.length) * 100} className="mb-3" />
+      <QuestionCard question={question} selected={selected} onSelect={handleSelect} />
+      {selected !== null && (
+        <Button className="mt-3 w-100" onClick={handleNext}>
+          {isLast ? 'See results' : 'Next question'}
         </Button>
-      ))}
+      )}
     </div>
   )
 }
-/**const [searchParams] = useSearchParams() reads the settings from the URL (?amount=10&category=18). It returns a pair, and we only need the first item.
-Four useState lines remember: the questions (a list, starting empty), whether we are loading (starting true), an error message, and a retry counter.
-useEffect(..., [searchParams, attempt]) runs the code when the screen appears and again whenever searchParams or attempt changes. That is how the “Try again” button works: it adds 1 to attempt, which re-runs the fetch.
-setLoading(true) and setError('') reset the screen at the start of each attempt, so an old error doesn’t stay visible.
-searchParams.get('amount') || 10 reads the amount from the URL, and uses 10 if it is missing. || means “or”.
-await getQuestions(...) pauses until the questions arrive. If anything throws, catch takes over and stores e.message, which is the text we wrote in api.js.
-if (loading) { return (...) } returns early. While loading, the component shows only the spinner, and the code below doesn’t run yet.
-if (error) { return (...) } does the same for errors, showing a red alert with a retry button.
-onClick={() => setAttempt(attempt + 1)} means “when clicked, add 1 to attempt”.
-const question = questions[0] takes the first question from the list. Lists start counting at 0.
-question.answers.map(...) draws one button per answer. d-block mb-2 are Bootstrap classes that put each button on its own line with space below. */

@@ -5,13 +5,12 @@ import { getCategories } from '../api.js'
 
 export default function Home() {
   const navigate = useNavigate()
-  const [categories, setCategories] = useState([])   // NEW
-  const [category, setCategory] = useState('')       // NEW
-  const [error, setError] = useState('')             // NEW
+  const [categories, setCategories] = useState([])
+  const [category, setCategory] = useState('')
+  const [error, setError] = useState('')
   const [difficulty, setDifficulty] = useState('')
   const [amount, setAmount] = useState(10)
 
-  // NEW: load categories once when the screen first appears
   useEffect(() => {
     const controller = new AbortController()
 
@@ -33,7 +32,7 @@ export default function Home() {
   function handleSubmit(event) {
     event.preventDefault()
     const params = new URLSearchParams({ amount })
-    if (category) params.set('category', category)   // NEW
+    if (category) params.set('category', category)
     if (difficulty) params.set('difficulty', difficulty)
     navigate(`/quiz?${params}`)
   }
@@ -64,8 +63,14 @@ export default function Home() {
         </Form.Group>
 
         <Form.Group className="mb-4" controlId="amount">
-          <Form.Label>Number of questions: {amount}</Form.Label>
-          <Form.Range min={5} max={20} step={5} value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <Form.Label>Number of questions (1-20)</Form.Label>
+          <Form.Control
+            type="number"
+            min={1}
+            max={20}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
         </Form.Group>
 
         <Button type="submit" className="w-100">Start quiz</Button>
@@ -73,15 +78,3 @@ export default function Home() {
     </Card>
   )
 }
-/**import { getCategories } from '../api.js' loads your API function. ../ means “go up one folder”, because api.js is in src and this file is in src/pages.
-useState([]) for categories starts with an empty list, which we fill when the data arrives. category holds the chosen one, and error holds a message if loading fails.
-useEffect(() => { ... }, []) runs code at a certain moment, not on every redraw. The empty [] at the end means “run once, when the screen first appears”. Fetching data is the classic use for it.
-new AbortController() creates a cancel button for the request. We pass its signal to fetch.
-async function load() is needed because the effect function itself can’t be async, so we define an async function inside it and call it.
-try { ... } catch (e) { ... } tries the code in try. If anything throws an error, JavaScript jumps to catch instead of crashing. This is the “handle errors properly” part of the assignment.
-e.name !== 'AbortError' ignores the error that cancelling causes on purpose.
-return () => controller.abort() is cleanup. If you leave the screen before the data arrives, the request is cancelled.
-{error && <Alert ...>} shows the alert only if error is not empty. && means “if the left side is true, show the right side”.
-categories.map((c) => (...)) turns each category into an <option>. .map goes through a list and builds something for each item.
-key={c.id} gives each item a unique label so React can track them. React requires it for lists.
-value={c.id} is what gets stored when chosen, and {c.name} is the text the user sees. */
