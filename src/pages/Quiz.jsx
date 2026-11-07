@@ -1,3 +1,6 @@
+import { useLocation } from 'react-router-dom'
+
 export default function Quiz() {
-  return <h1>Quiz</h1>
+  const location = useLocation()
+  return <p>Settings: {location.search}</p>
 }
