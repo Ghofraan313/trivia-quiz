@@ -1,15 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Form, Button } from 'react-bootstrap'
+import { Alert, Card, Form, Button } from 'react-bootstrap'
+import { getCategories } from '../api.js'
 
 export default function Home() {
   const navigate = useNavigate()
+  const [categories, setCategories] = useState([])   // NEW
+  const [category, setCategory] = useState('')       // NEW
+  const [error, setError] = useState('')             // NEW
   const [difficulty, setDifficulty] = useState('')
   const [amount, setAmount] = useState(10)
+
+  // NEW: load categories once when the screen first appears
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function load() {
+      try {
+        const list = await getCategories(controller.signal)
+        setCategories(list)
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          setError('Categories could not load. You can still play with any category.')
+        }
+      }
+    }
+
+    load()
+    return () => controller.abort()
+  }, [])
 
   function handleSubmit(event) {
     event.preventDefault()
     const params = new URLSearchParams({ amount })
+    if (category) params.set('category', category)   // NEW
     if (difficulty) params.set('difficulty', difficulty)
     navigate(`/quiz?${params}`)
   }
@@ -17,7 +41,18 @@ export default function Home() {
   return (
     <Card body>
       <h1 className="h3">Choose your quiz</h1>
+      {error && <Alert variant="warning">{error}</Alert>}
       <Form onSubmit={handleSubmit}>
+        <Form.Group className="mb-3" controlId="category">
+          <Form.Label>Category</Form.Label>
+          <Form.Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Any category</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </Form.Select>
+        </Form.Group>
+
         <Form.Group className="mb-3" controlId="difficulty">
           <Form.Label>Difficulty</Form.Label>
           <Form.Select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
@@ -38,27 +73,15 @@ export default function Home() {
     </Card>
   )
 }
-/**Line by line:
-
-import { useState } from 'react' loads
- React’s tool for remembering values. When
-  a remembered value changes, React redraws
-   the screen.
-useNavigate gives you a function that switches screens from code, which we need after the form is submitted.
-Card, Form, Button are ready-made Bootstrap components.
-const navigate = useNavigate() stores that function so we can call navigate(...) later.
-const [difficulty, setDifficulty] = useState('') creates a remembered value. difficulty is the current value, setDifficulty changes it, and '' is the starting value (nothing chosen). Never change difficulty directly. Always use setDifficulty, or React won’t redraw.
-useState(10) does the same for the number of questions, starting at 10.
-function handleSubmit(event) runs when the form is submitted.
-event.preventDefault() stops the browser’s default behavior, which is reloading the page.
-new URLSearchParams({ amount }) builds a query string such as amount=10. The { amount } is shorthand for { amount: amount }.
-if (difficulty) params.set(...) adds the difficulty only if one was chosen, because an empty string counts as false.
-navigate(/quiz?${params}) goes to the Quiz screen with the settings in the URL, for example /quiz?amount=10&difficulty=easy. The backticks let ${params} insert a value into the text.
-<Card body> draws a Bootstrap box with padding.
-onSubmit={handleSubmit} connects the form to the function above.
-<Form.Group controlId="difficulty"> groups a label with its input. The controlId links them, so clicking the label focuses the input, which helps accessibility.
-value={difficulty} makes the dropdown show the remembered value.
-onChange={(e) => setDifficulty(e.target.value)} runs whenever the user picks something. e.target.value is what they picked, and we store it. This pattern is called a controlled input.
-{amount} inside the label shows the current number, and it updates as the slider moves.
-<Form.Range ... /> draws the slider, with its limits set by min, max and step.
-w-100 is a Bootstrap class for 100% width. */
+/**import { getCategories } from '../api.js' loads your API function. ../ means “go up one folder”, because api.js is in src and this file is in src/pages.
+useState([]) for categories starts with an empty list, which we fill when the data arrives. category holds the chosen one, and error holds a message if loading fails.
+useEffect(() => { ... }, []) runs code at a certain moment, not on every redraw. The empty [] at the end means “run once, when the screen first appears”. Fetching data is the classic use for it.
+new AbortController() creates a cancel button for the request. We pass its signal to fetch.
+async function load() is needed because the effect function itself can’t be async, so we define an async function inside it and call it.
+try { ... } catch (e) { ... } tries the code in try. If anything throws an error, JavaScript jumps to catch instead of crashing. This is the “handle errors properly” part of the assignment.
+e.name !== 'AbortError' ignores the error that cancelling causes on purpose.
+return () => controller.abort() is cleanup. If you leave the screen before the data arrives, the request is cancelled.
+{error && <Alert ...>} shows the alert only if error is not empty. && means “if the left side is true, show the right side”.
+categories.map((c) => (...)) turns each category into an <option>. .map goes through a list and builds something for each item.
+key={c.id} gives each item a unique label so React can track them. React requires it for lists.
+value={c.id} is what gets stored when chosen, and {c.name} is the text the user sees. */
