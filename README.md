@@ -4,7 +4,7 @@ A quiz app built with React. Choose a category, difficulty and number of
 questions, answer them one at a time, and review your mistakes at the end.
 Questions come from the [Open Trivia DB](https://opentdb.com/) API.
 
-Live app: https://YOUR-USERNAME.github.io/trivia-quiz/
+Live app: https://Ghofraan313.github.io/trivia-quiz/
 
 ## Run locally
 
